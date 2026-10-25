@@ -1,0 +1,68 @@
+name: Tocsin check
+description: Fail a pull request when a lockfile dependency has a known security advisory, and comment the upgrade.
+author: Fortunian
+branding:
+  icon: shield
+  color: red
+
+inputs:
+  base-url:
+    description: The Tocsin API base URL. Self-hosters point it at their own worker.
+    required: false
+    default: https://tocsin.sh
+  api-key:
+    description: An optional Tocsin API key for higher rate limits. Pass it from a secret.
+    required: false
+    default: ""
+  min-severity:
+    description: The lowest severity that counts (low, medium, high, critical). An unknown severity always counts.
+    required: false
+    default: low
+  fail-on:
+    description: When the step fails. affected = any counted advisory, exploited = only an exploited one (CISA KEV), never = report only.
+    required: false
+    default: affected
+  fail-on-error:
+    description: Fail the step when the check could not run (network or API error, no lockfile). Default is a warning.
+    required: false
+    default: "false"
+  comment:
+    description: On pull_request events, post or update one comment with the affected dependencies.
+    required: false
+    default: "true"
+  working-directory:
+    description: The directory to scan for lockfiles, relative to the workspace.
+    required: false
+    default: .
+  max-body-bytes:
+    description: The most lockfile bytes sent in one check (the hosted API accepts 2 MB). A file that does not fit is skipped with a warning.
+    required: false
+    default: "2097152"
+  github-token:
+    description: The token that posts the PR comment. It needs pull-requests write.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  affected:
+    description: The number of affected dependencies at or above min-severity.
+    value: ${{ steps.check.outputs.affected }}
+
+# This repository exists so the action can be listed on the GitHub Marketplace,
+# which needs action.yml at the repository root. The implementation lives in
+# https://github.com/Fortunian/tocsin/tree/main/action and this wrapper calls it.
+runs:
+  using: composite
+  steps:
+    - id: check
+      uses: Fortunian/tocsin/action@v1
+      with:
+        base-url: ${{ inputs.base-url }}
+        api-key: ${{ inputs.api-key }}
+        min-severity: ${{ inputs.min-severity }}
+        fail-on: ${{ inputs.fail-on }}
+        fail-on-error: ${{ inputs.fail-on-error }}
+        comment: ${{ inputs.comment }}
+        working-directory: ${{ inputs.working-directory }}
+        max-body-bytes: ${{ inputs.max-body-bytes }}
+        github-token: ${{ inputs.github-token }}
